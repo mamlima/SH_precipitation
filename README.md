@@ -6,4 +6,4 @@ The open-source code base for the paper on the linkage of Southern Hemisphere pr
 
 # Data to run the code
 
-The full data can be consulted and downloaded with no reservations at [![Zenodo: https://doi.org/10.5281/zenodo.13891996](https://img.shields.io/badge/Zenodo-10.5281/zenodo.13891996-blue)](https://doi.org/10.5281/zenodo.13891996).
+The full data can be consulted and downloaded with no reservations at [![Zenodo: https://doi.org/10.5281/zenodo.20218812](https://img.shields.io/badge/Zenodo-10.5281/zenodo.20218812-blue)](https://doi.org/10.5281/zenodo.20218812)
