@@ -375,9 +375,9 @@ plt.subplots_adjust(hspace=-0.15)
 # --- Custom legend with percentages ---
 legend_handles = [
     Line2D([0], [0], marker='s', color='none', markerfacecolor='tomato',
-           markeredgecolor='k', markersize=12, label=f' LLB → LLB ({pct_llb_llb:.1f}%)'),
+           markeredgecolor='k', markersize=12, label=f' LLB ({pct_llb_llb:.1f}%)'),
     Line2D([0], [0], marker='s', color='none', markerfacecolor='mediumorchid',
-           markeredgecolor='k', markersize=12, label=f' HLB → HLB ({pct_hlb_hlb:.1f}%)'),
+           markeredgecolor='k', markersize=12, label=f' HLB ({pct_hlb_hlb:.1f}%)'),
     Line2D([0], [0], marker='o', color='none', markerfacecolor='black',
            markersize=0, label=f'(● → +) LLB → HLB ({pct_llb_hlb:.1f}%)'),
     Line2D([0], [0], marker='^', color='none', markerfacecolor='black',
@@ -399,4 +399,4 @@ ax1.legend(
 )
 
 #### Adjust and save
-plt.savefig('../Figures/Fig1_Climatology.jpg', dpi=600, bbox_inches = 'tight')
+# plt.savefig('../Figures/Fig1_Climatology.jpg', dpi=600, bbox_inches = 'tight')

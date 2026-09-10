@@ -18,6 +18,13 @@ data_paths = {
 
 alpha = 0.025
 
+USE_FDR = True
+fdr_paths = {
+    'SAm': f'../Data/Output_data/RidgePrecipFDR_SAm_{which_season}.nc',
+    'SAf': f'../Data/Output_data/RidgePrecipFDR_SAf_{which_season}.nc',
+    'Oce': f'../Data/Output_data/RidgePrecipFDR_Oce_{which_season}.nc',
+}
+
 # ── Sector centres as defined in the data (original grid) ──
 sector_centers = np.arange(-165, 195, 10)
 
@@ -69,6 +76,8 @@ annot_fs = 11
 
 #%% 2. Load data and resolve sector indices -----------------------------------
 datasets = {name: xr.open_dataset(path) for name, path in data_paths.items()}
+fdr_sets = ({name: xr.open_dataset(p) for name, p in fdr_paths.items()}
+            if USE_FDR else {})      # ADDED
 
 def sector_lon_to_index(sector_lon, sector_centers):
     idx = np.argmin(np.abs(sector_centers - sector_lon))
@@ -203,8 +212,7 @@ ax_globe.text(0.05, 0.95, 'a)', transform=ax_globe.transAxes,
               fontsize=title_fs-5, va='top')
 
 
-#%% 5. Draw zoom panels -------------------------------------------------------
-# Force draw so ax_globe.transData is properly initialised for coordinate transforms
+#%% 5. Draw zoom panels -----------------------------------------------------
 fig.canvas.draw()
 
 panel_letters = 'dcbefghijklmno'
@@ -251,18 +259,25 @@ for name in region_order:
         cf_ref = cf
 
         # ── Significance hatching ──
-        valid_mask = ~np.isnan(precip_clim.values) & (precip_clim.values >= 0.5)
+        thr_map = {'winter': 0.5, 'summer': 1.5}
+        valid_mask = (~np.isnan(precip_clim.values) &
+                      (precip_clim.values >= thr_map[which_season]))
 
-        sig_high = (pval.values >= (1 - alpha)) & valid_mask
+        if USE_FDR:                                     # ADDED (R2.2)
+            sig_fld = fdr_sets[name]['sig_clim'].isel(reg=oi).values
+            sig_high = (sig_fld == 1) & valid_mask
+            sig_low  = (sig_fld == -1) & valid_mask
+        else:
+            sig_high = (pval.values >= (1 - alpha)) & valid_mask
+            sig_low  = (pval.values <= alpha) & valid_mask
         if np.any(sig_high):
             ax.contourf(ds['lon'], ds['lat'], sig_high.astype(int),
-                        levels=[0.5, 1.5], hatches=['.'], colors='none',
+                        levels=[0.5, 1.5], hatches=['//'], colors='none',
                         transform=proj_pc, zorder=3)
 
-        sig_low = (pval.values <= alpha) & valid_mask
         if np.any(sig_low):
             ax.contourf(ds['lon'], ds['lat'], sig_low.astype(int),
-                        levels=[0.5, 1.5], hatches=['//'], colors='none',
+                        levels=[0.5, 1.5], hatches=['.'], colors='none',
                         transform=proj_pc, zorder=3)
 
         # Panel label & title (inside plot with white box)
@@ -325,7 +340,7 @@ for name in region_order:
         con = ConnectionPatch(
             xyA=llb_xy, coordsA=ax_globe.transData,
             xyB=panel_corner, coordsB=ax.transAxes,
-            color=cfg['box_color'], linewidth=1.5, linestyle='-',
+            color=cfg['box_color'], linewidth=3.5, linestyle='-',
             alpha=0.4, zorder=10)
         fig.add_artist(con)
         
@@ -335,14 +350,14 @@ cbar_ax = fig.add_axes([0.282, 0.08, 0.525, 0.02])
 cb = fig.colorbar(cf_ref, cax=cbar_ax, orientation='horizontal', extend='both')
 cb.set_label('Precipitation anomaly (mm/day)', fontsize=label_fs)
 cb.set_ticks([-3, -2.4, -1.8, -1.2, -0.6, 0, 0.6, 1.2, 1.8, 2.4, 3])
-cb.ax.tick_params(labelsize=tick_fs)
+cb.ax.tick_params(labelsize=tick_fs+3)
 
 
 #%% 7. Hatching legend --------------------------------------------------------
 hatch_handles = [
-    mpatches.Patch(facecolor='none', edgecolor='black', hatch='.',
-                   label='Sig. positive anomaly'),
     mpatches.Patch(facecolor='none', edgecolor='black', hatch='//',
+                   label='Sig. positive anomaly'),
+    mpatches.Patch(facecolor='none', edgecolor='black', hatch='.',
                    label='Sig. negative anomaly'),
 ]
 legend = fig.legend(handles=hatch_handles, loc='lower right', ncol=2,
@@ -354,5 +369,5 @@ legend.set_zorder(20)
 
 
 #%% 9. Save -------------------------------------------------------------------
-outpath = '../Figures/FigS6_ClimaImpact.png'
+outpath = '../Figures/FigS2_ClimaImpact_FDR.png'
 plt.savefig(outpath, dpi=600, bbox_inches='tight', facecolor='white')

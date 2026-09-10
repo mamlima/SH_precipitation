@@ -10,7 +10,7 @@ from io import BytesIO
 from PIL import Image
 import pickle
 
-which_season = 'year'
+which_season = 'winter'
 
 #%% 1. Functions
 
@@ -173,7 +173,6 @@ def indv_ax_legacy(lines, cols, pos,
 def draw_violin(box_ax, data, position_offset, label_name, c):
     alpha = 0.6
     lw = .8
-    # Use position_offset to space the 4 variables within each sector
     parts = box_ax.violinplot(data, positions=np.arange(-180+30/8*position_offset, 180 + (7.5 if position_offset == 7 else 0), 30),
                               showmedians=True, widths=6)
     for pc in parts['bodies']:
@@ -215,9 +214,9 @@ def draw_map_and_violins(fig, data_list, var_names, panel_letter, gs_slot=None):
     ax_map.add_feature(borders, edgecolor='k', linewidth=0.2, alpha=0.9, zorder=0)
     ax_map.gridlines(draw_labels=False, linestyle="--", alpha=0.3)
     
-    ax_map.plot([-180,180], [latmax_r,latmax_r], linewidth=1., ls='-',
+    ax_map.plot([-180,180], [latmax_r,latmax_r], linewidth=1., ls='--',
               color='dimgrey', transform=ccrs.PlateCarree(), zorder=1)
-    ax_map.plot([-180,180], [latmin_r,latmin_r], linewidth=1., ls='-',
+    ax_map.plot([-180,180], [latmin_r,latmin_r], linewidth=1., ls='--',
               color='dimgrey', transform=ccrs.PlateCarree(), zorder=1)
     for j,i in enumerate(lons_r[:-1]):
         ax_map.plot([i,i], [latmin_r,latmax_r], linewidth=1, ls='--',
@@ -334,12 +333,9 @@ ax3, im3 = indv_ax(gs_top[4],
               True, True, 'c)')
 
 # --- Manually place vertical colorbars aligned to each plot ---
-# Format: [left, bottom, width, height] in figure coordinates
-# Adjust these values to fine-tune colorbar position
 cbar_width = 0.018
-cbar_left  = 0.82   # <-- move left/right to fit inside bottom panel limits
+cbar_left  = 0.82
 
-# Force a layout pass so get_position() returns final coordinates
 fig.canvas.draw()
 
 for ax_i, im_i, ticks, label in [
@@ -412,13 +408,9 @@ ax3, im3 = indv_ax(gs_top[4],
               -2.5, 2.5, 0.2, np.arange(0,50,2.5), 2.5, 'bwr',
               True, True, 'c)')
 
-# --- Manually place vertical colorbars aligned to each plot ---
-# Format: [left, bottom, width, height] in figure coordinates
-# Adjust these values to fine-tune colorbar position
 cbar_width = 0.018
-cbar_left  = 0.82   # <-- move left/right to fit inside bottom panel limits
+cbar_left  = 0.82
 
-# Force a layout pass so get_position() returns final coordinates
 fig.canvas.draw()
 
 for ax_i, im_i, ticks, label in [

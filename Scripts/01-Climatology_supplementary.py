@@ -237,14 +237,16 @@ def draw_season_panel(fig, map_pos, hist_pos, LLB_clim, HLB_clim, ndays_LLB, nda
     pct_llb_llb = n_llb_llb / total_events * 100
     pct_hlb_hlb = n_hlb_hlb / total_events * 100
     pct_llb_hlb = n_llb_hlb / total_events * 100
+    print(n_llb_hlb, total_events)
     pct_hlb_llb = n_hlb_llb / total_events * 100
+    print(n_hlb_llb)
 
     # --- Legend ---
     legend_handles = [
         Line2D([0], [0], marker='s', color='none', markerfacecolor='tomato',
-               markeredgecolor='k', markersize=10, label=f' LLB → LLB ({pct_llb_llb:.1f}%)'),
+               markeredgecolor='k', markersize=10, label=f' LLB ({pct_llb_llb:.1f}%)'),
         Line2D([0], [0], marker='s', color='none', markerfacecolor='mediumorchid',
-               markeredgecolor='k', markersize=10, label=f' HLB → HLB ({pct_hlb_hlb:.1f}%)'),
+               markeredgecolor='k', markersize=10, label=f' HLB ({pct_hlb_hlb:.1f}%)'),
         Line2D([0], [0], marker='o', color='none', markerfacecolor='black',
                markersize=0, label=f'(● → +) LLB → HLB ({pct_llb_hlb:.1f}%)'),
         Line2D([0], [0], marker='^', color='none', markerfacecolor='black',
@@ -336,4 +338,4 @@ cbar2.ax.tick_params(labelsize=10)
 
 
 #%% 7. Save
-plt.savefig('../Figures/FigS1_Climatology_seasonal.jpg', dpi=600, bbox_inches='tight')
+# plt.savefig('../Figures/FigS1_Climatology_seasonal.jpg', dpi=600, bbox_inches='tight')

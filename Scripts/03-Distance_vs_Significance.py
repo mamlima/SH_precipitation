@@ -13,12 +13,16 @@ import cartopy.io.shapereader as shpreader
 #%% 1. Configuration
 alpha = 0.025
 res   = 0.1
-relevance_percentile = 82
+relevance_percentile = 80
+
+USE_FDR = True              # False reproduces the originally submitted pointwise version
+fdr_pattern = '../Data/Output_data/RidgePrecipFDR_{reg}_{season}.nc'
+DENOMINATOR = 'valid'
 
 # ── Season-dependent validity thresholds ─────────────────────────────────────
 thresholds = {
     'winter': {'clim': 0.5, 'ext': 3.0},
-    'summer': {'clim': 3.0, 'ext': 9.0},
+    'summer': {'clim': 1.5, 'ext': 9.0},
 }
 
 label_size = 14
@@ -50,11 +54,16 @@ seasons = ['winter', 'summer']
 regions = ['SAm', 'SAf', 'Oce']
 
 raw = {}
+fdr = {}
 for season in seasons:
     raw[season] = {}
+    fdr[season] = {}
     for reg in regions:
         raw[season][reg] = xr.open_dataset(
             f'../Data/Output_data/RidgePrecipImpact_{reg}_{season}.nc')
+        if USE_FDR:      # ADDED
+            fdr[season][reg] = xr.open_dataset(
+                fdr_pattern.format(reg=reg, season=season))
 
 
 #%% 3. Compute metrics for both seasons
@@ -81,15 +90,25 @@ for reg in regions:
         thr_ext    = thresholds[season]['ext']
         valid_clim = ds['precip_clima'].isel(reg=0) > thr_clim
         valid_ext  = ds['precip_ext'].isel(reg=0)   > thr_ext
-        total_land = land_mask.sum(dim=['lat', 'lon']).values
 
-        sig_clim = ((ds['pval_llb'] < alpha) |
-                    (ds['pval_llb'] > (1 - alpha))) & land_mask & valid_clim
-        sig_ext  = ((ds['pval_llb_ext'] < alpha) |
-                    (ds['pval_llb_ext'] > (1 - alpha))) & land_mask & valid_ext
+        if DENOMINATOR == 'valid':
+            denom_clim = (land_mask & valid_clim).sum(dim=['lat', 'lon']).values
+            denom_ext  = (land_mask & valid_ext ).sum(dim=['lat', 'lon']).values
+        else:
+            denom_clim = denom_ext = land_mask.sum(dim=['lat', 'lon']).values
 
-        pct_clim = (sig_clim.sum(dim=['lat', 'lon']) / total_land * 100).values
-        pct_ext  = (sig_ext.sum(dim=['lat', 'lon'])  / total_land * 100).values
+        if USE_FDR:
+            fd = fdr[season][reg]
+            sig_clim = (fd['sig_clim'] != 0) & land_mask & valid_clim
+            sig_ext  = (fd['sig_ext']  != 0) & land_mask & valid_ext
+        else:
+            sig_clim = ((ds['pval_llb'] < alpha) |
+                        (ds['pval_llb'] > (1 - alpha))) & land_mask & valid_clim
+            sig_ext  = ((ds['pval_llb_ext'] < alpha) |
+                        (ds['pval_llb_ext'] > (1 - alpha))) & land_mask & valid_ext
+
+        pct_clim = (sig_clim.sum(dim=['lat', 'lon']) / denom_clim * 100).values
+        pct_ext  = (sig_ext.sum(dim=['lat', 'lon'])  / denom_ext * 100).values
 
         anom_clim = (np.abs(ds['precip_llb'] - ds['precip_clima']) * sig_clim).sum(
             dim=['lat', 'lon']).values
@@ -133,7 +152,7 @@ for i, (ax, reg) in enumerate(zip(axes, regions)):
     threshold = np.percentile(score, relevance_percentile)
 
     # ── Background map ───────────────────────────────────────────────────────
-    ax.set_extent([-180, 180, -85, 0], crs=ccrs.PlateCarree())
+    ax.set_extent([-180, 180, -90, 0], crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m', linewidth=0.9, color='dimgrey', zorder=1)
     ax.add_feature(cfeature.NaturalEarthFeature(
         'physical', 'land', '50m', facecolor='gainsboro', edgecolor='none'), zorder=0)
@@ -159,6 +178,17 @@ for i, (ax, reg) in enumerate(zip(axes, regions)):
         if not intersection.is_empty:
             ax.add_geometries([intersection], ccrs.PlateCarree(),
                                facecolor='black', alpha=0.5, edgecolor='none', zorder=2)
+    
+    # Hide Antarctica
+    bounds = [-90,-60,-180,179.9]   # [lat_min, lat_max, lon_min, lon_max]
+    region_box = box(bounds[2], bounds[0], bounds[3], bounds[1])
+    land_shp = shpreader.natural_earth(resolution='50m', category='physical', name='land')
+    reader = shpreader.Reader(land_shp)
+    for geom in reader.geometries():
+        intersection = geom.intersection(region_box)
+        if not intersection.is_empty:
+            ax.add_geometries([intersection], ccrs.PlateCarree(),
+                               facecolor='white', edgecolor='white', zorder=2)
 
     # ── Overlay axes ─────────────────────────────────────────────────────────
     # ax_line : left y-axis  — fraction (%)
@@ -176,7 +206,7 @@ for i, (ax, reg) in enumerate(zip(axes, regions)):
 
     # ── Bars: accumulated anomaly (side-by-side, on right axis) ─────────────
     x_win = x - bar_width + 2
-    x_sum = x + 2 
+    x_sum = x + 2
 
     ax_anom.bar(x_win, rw['anom_clim'] / 1000, bar_width,
                 color=color_win_clim, alpha=bar_alpha_clim, zorder=-1,
@@ -217,7 +247,7 @@ for i, (ax, reg) in enumerate(zip(axes, regions)):
     ax_line.xaxis.set_minor_locator(plt.MultipleLocator(10))
     ax_line.tick_params(axis='x', which='minor', length=3)
 
-    ax_line.set_ylabel('Significant pixels (%)', fontsize=label_size)
+    ax_line.set_ylabel('Significant extension\n(% of area)', fontsize=label_size)
     ax_anom.set_ylabel('Accum. |anomaly| (m)',   fontsize=label_size)
 
     ax_line.tick_params(axis='y', labelsize=tick_size)
@@ -269,5 +299,6 @@ for i, (ax, reg) in enumerate(zip(axes, regions)):
                         loc='upper right', ncol=2,
                         frameon=True, framealpha=0.95)
 
-plt.savefig('../Figures/Fig2_Distance_vs_significance1.png',
+plt.savefig(f'../Figures/Fig2_Distance_vs_significance'
+            f'{"_FDR" if USE_FDR else ""}.png',
             dpi=600, bbox_inches='tight')
